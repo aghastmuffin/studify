@@ -1,8 +1,9 @@
-import sys, os, playsound, json
+import sys, os, playsound, json, datetime
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QFormLayout, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect# noqa: F401
+from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtWidgets import QFormLayout, QTableWidget, QTableWidgetItem, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect# noqa: F401
+import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
 app = QApplication(sys.argv)
@@ -10,6 +11,20 @@ TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
 THIS_BREAK = 0
+
+class TodoModel(QtCore.QAbstractListModel):
+    def __init__(self, *args, todos=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.todos = todos or []
+
+    def data(self, index, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            status, text = self.todos[index.row()]
+            return text
+
+    def rowCount(self, index):
+        return len(self.todos)
+
 
 class TodoManager:
     def __init__(self, filename="todos.json"):
@@ -20,20 +35,48 @@ class TodoManager:
         if os.path.exists(self.filename):
             try:
                 with open(self.filename, 'r') as f:
-                    return json.load(f)
+                    todos = json.load(f)
+                    # Convert date strings back to date objects
+                    for todo in todos:
+                        if todo.get('due_date'):
+                            try:
+                                todo['due_date'] = datetime.date.fromisoformat(todo['due_date'])
+                            except ValueError:
+                                pass  # Keep as string if invalid date
+                    return todos
             except:
                 return []
         return []
-    
+
+
+        
     def save_todos(self):
+        # Create a copy of todos to modify for saving
+        todos_to_save = []
+        
+        # Convert any date objects to strings
+        for todo in self.todos:
+            todo_copy = dict(todo)  # Create a copy to avoid modifying the original
+            
+            # Convert date to string if it's a date object
+            if isinstance(todo_copy.get('due_date'), datetime.date):
+                todo_copy['due_date'] = todo_copy['due_date'].isoformat()
+                
+            todos_to_save.append(todo_copy)
+        
+        # Save the converted todos to file
         with open(self.filename, 'w') as f:
-            json.dump(self.todos, f)
+            json.dump(todos_to_save, f)
     
-    def add_todo(self, title, description="", due_date=None, completed=False):
+    def add_todo(self, title:str, description:str="", due_date=None, important:bool=False, completed:bool=False):
+        # Convert date object to string if it exists
+        date_str = due_date.isoformat() if isinstance(due_date, datetime.date) else due_date
+        
         todo = {
             "title": title,
             "description": description,
-            "due_date": due_date,
+            "due_date": date_str,
+            "important": important,
             "completed": completed
         }
         self.todos.append(todo)
@@ -43,7 +86,16 @@ class TodoManager:
         if 0 <= index < len(self.todos):
             del self.todos[index]
             self.save_todos()
-            
+
+    def readall(self):
+        return self.todos
+    
+    def get_todo(self, index):
+        if 0 <= index < len(self.todos):
+            return self.todos[index]
+        return None
+    
+
 class Effects:
     def fade(self, widget):
         """Apply a fade-out effect to the given widget."""
@@ -71,10 +123,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.old_pg = 0
+        self.todomgr = TodoManager()
         self.timer_time = ""
-        self.setWindowTitle("Placement title")
-        icon_path = os.path.join(os.path.dirname(__file__), "assets/mini-logo.png")
-        self.setWindowIcon(QIcon(icon_path))
+        self.setWindowTitle("Studify")
+        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "full-logo.png"))
+        self.setWindowIcon(QIcon(QPixmap(icon_path)))
         self.setMinimumHeight(300)
         self.setMinimumWidth(400)
         self.central_widget = QWidget()
@@ -106,10 +160,12 @@ class MainWindow(QMainWindow):
         self.study_s = self.study_scene()
         self.pause_s = self.pause_scene()
         self.complete_s = self.complete_scene()
+        self.card_s = self.study_cards()
         self.stacked_widget.addWidget(self.title_s)
         self.stacked_widget.addWidget(self.study_s)
         self.stacked_widget.addWidget(self.pause_s)
         self.stacked_widget.addWidget(self.complete_s)
+        self.stacked_widget.addWidget(self.card_s)
 
         self.stacked_widget.currentChanged.connect(self.on_page_changed)
         self.stacked_widget.setCurrentIndex(0)
@@ -130,6 +186,7 @@ class MainWindow(QMainWindow):
         spacer = QSpacerItem(0, 100)
         start = QPushButton("Start")
         stats = QPushButton("Stats")
+        
         
         start.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(1)))  # Switch to study scene
         layout.addWidget(welcome_title)
@@ -189,7 +246,7 @@ class MainWindow(QMainWindow):
             self.l_timer.setText(str(time_str))
     
     def update_clock(self):
-        """update the clocl element"""
+        """update the clock element"""
         now = dt.datetime.now()
         self.clock_l.setText(now.strftime("%H:%M"))
 
@@ -214,6 +271,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.clock_l)
         layout.addWidget(unpause)
         layout.addWidget(back_button)
+
+        
         return scene
     
     def complete_scene(self):
@@ -239,7 +298,124 @@ class MainWindow(QMainWindow):
         layout.addWidget(back_button)
         return scene
 
+    def study_cards(self):
+        """
+        Create the study cards scene layout
+        """
+        self.card_index = 0
+        scene = QWidget()
+        layout = QVBoxLayout(scene)
+        
+        # Get study set data
+        self.study = self.load_studyset()
+        
+        # Set up title
+        title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
+        title.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        # Set up question and answer labels
+        self.question = QLabel("Question")
+        self.question.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.question.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        self.answer = QLabel("Answer Hidden")
+        self.answer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.answer.setStyleSheet("font-size: 18px; font-weight: bold;")
+
+        # Add the main content to the layout
+        layout.addWidget(title)
+        layout.addWidget(self.question)
+        layout.addWidget(self.answer)
+        
+        # Create buttons layout (horizontal) instead of table
+        button_layout = QHBoxLayout()
+        
+        # Create and add buttons
+        show_a = QPushButton("Show Answer")
+        next_q = QPushButton("Next")
+        back_q = QPushButton("Back")
+        back_button = QPushButton("Back to Menu")
+        
+        # Add buttons to the horizontal layout
+        button_layout.addWidget(show_a)
+        button_layout.addWidget(back_q)
+        button_layout.addWidget(next_q)
+        button_layout.addWidget(back_button)
+        
+        # Add the button layout to main layout
+        layout.addLayout(button_layout)
+        
+        # Connect signals
+        show_a.clicked.connect(lambda: self.show_card())
+        next_q.clicked.connect(lambda: self.next_card())
+        back_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
+        
+        return scene
+    def next_card(self):
+        self.card_index += 1
+        if self.card_index == len(self.study[0]["questions"]):
+            self.card_index = 0
+            
+        print(self.card_index)
+        self.reset_card()
+
+    def reset_card(self):
+        cards = self.study 
+        question = cards[0]["questions"][self.card_index]["question"]
+        answer = "Answer Hidden"
+        self.question.setText(question)
+        self.answer.setText(answer)
+
+    def show_card(self):
+        cards = self.study 
+        question = cards[0]["questions"][self.card_index]["question"]
+        answer = cards[0]["questions"][self.card_index]["answer"]
+        self.question.setText(question)
+        self.answer.setText(answer)
+        self.card_index += 1
+
+    def load_studyset(self):
+        filename = "study_set.json"
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                print(f)
+                cards = json.load(f)
+                return cards
+        else:
+            with open(filename, 'w') as f:
+                cards = [
+                    {
+                        "friendly_name": "Sample Study Set",
+                        "questions": [
+                            {"question": "What is the capital of France?", "answer": "Paris"},
+                            {"question": "What is 2 + 2?", "answer": "4"},
+                            {"question": "What is the largest planet in our solar system?", "answer": "Jupiter"}
+                        ]
+                    }
+                ]
+                json.dump(cards, f)
+                return cards
+        
+
+
+    def clubs(self):
+        """
+        Creates the clubview layout, for online interactivity only
+        """
+        scene = QWidget()
+        layout = QVBoxLayout(scene)
+        # Add a label to the study scene
+        clubs = QLabel("Clubs")
+        clubs.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        clubs.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        # Add a back button to return to the title scene
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
+        layout.addWidget(clubs)
     def on_page_changed(self, index):
+        self.old_pg = self.stacked_widget.currentIndex()
         if index in [2, 3, 4]:
             current_time = self.l_timer.text()
             scene = self.stacked_widget.widget(index)
@@ -247,6 +423,9 @@ class MainWindow(QMainWindow):
                 timer_widget.setText(current_time)
             if index == 4:
                 self.timer_time = self.l_timer.text()
+    
+
+                
 class CustomDialog(QDialog):
     def __init__(self, message="", title="", buttons=None):
         super().__init__()
@@ -277,6 +456,7 @@ class CustomDialog(QDialog):
         layout.addWidget(message_label)
         layout.addWidget(self.buttonBox)
         self.setLayout(layout)
+    
 
 def updatefunc():
     update_info = _cloud.check_for_updates()
@@ -307,7 +487,7 @@ def updatefunc():
 
 if __name__ == "__main__":
     # Use MainWindow instead of QWidget
-
+    updatefunc()
     window = MainWindow()
     window.show()
     app.exec()
