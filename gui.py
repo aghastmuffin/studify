@@ -1,3 +1,4 @@
+from dis import show_code
 import sys, os, playsound, json, datetime
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
@@ -186,13 +187,16 @@ class MainWindow(QMainWindow):
         spacer = QSpacerItem(0, 100)
         start = QPushButton("Start")
         stats = QPushButton("Stats")
+        flashcard = QPushButton("Start Flashcards")
         
         
         start.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(1)))  # Switch to study scene
+        flashcard.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(4)))  # Switch to flashcard scene
         layout.addWidget(welcome_title)
         layout.addSpacerItem(spacer)
         layout.addWidget(start)
         layout.addWidget(self.clock_l)
+        layout.addWidget(flashcard)
         statsholder.addWidget(stats)
         statsholder.setAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -314,6 +318,10 @@ class MainWindow(QMainWindow):
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         
+        self.edit_studyset = QPushButton("Edit Study Set (implemented in future)")
+        self.edit_studyset.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(4))
+        layout.addWidget(self.edit_studyset)
+
         # Set up question and answer labels
         self.question = QLabel("Question")
         self.question.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -322,7 +330,7 @@ class MainWindow(QMainWindow):
         self.answer = QLabel("Answer Hidden")
         self.answer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.answer.setStyleSheet("font-size: 18px; font-weight: bold;")
-
+        
         # Add the main content to the layout
         layout.addWidget(title)
         layout.addWidget(self.question)
@@ -353,12 +361,16 @@ class MainWindow(QMainWindow):
         
         return scene
     def next_card(self):
-        self.card_index += 1
-        if self.card_index == len(self.study[0]["questions"]):
-            self.card_index = 0
-            
-        print(self.card_index)
-        self.reset_card()
+        if self.answer.text() == "Answer Hidden":
+            self.show_card()
+            return
+        else:
+            if self.card_index + 1 == len(self.study[0]["questions"]):
+                self.card_index = 0
+            else:
+                self.card_index += 1 
+            self.reset_card()
+            return
 
     def reset_card(self):
         cards = self.study 
@@ -373,7 +385,6 @@ class MainWindow(QMainWindow):
         answer = cards[0]["questions"][self.card_index]["answer"]
         self.question.setText(question)
         self.answer.setText(answer)
-        self.card_index += 1
 
     def load_studyset(self):
         filename = "study_set.json"
