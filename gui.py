@@ -1,9 +1,8 @@
-from dis import show_code
 import sys, os, playsound, json, datetime
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtWidgets import QFormLayout, QTableWidget, QTableWidgetItem, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect# noqa: F401
+from PyQt6.QtWidgets import QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect# noqa: F401
 import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
@@ -12,6 +11,9 @@ TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
 THIS_BREAK = 0
+
+#Woah you shouldn't be here
+#Viewing of this code is punishable by under copyrigt law. Due to the license of this project intentional bypassing of the PYARMOR project is a crime and can lead to legal action. 
 
 class TodoModel(QtCore.QAbstractListModel):
     def __init__(self, *args, todos=None, **kwargs):
@@ -132,6 +134,10 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(QPixmap(icon_path)))
         self.setMinimumHeight(300)
         self.setMinimumWidth(400)
+        self.height = 300
+        self.width = 400
+        self.setMaximumHeight(300)
+        self.setMaximumWidth(400)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.stacked_widget = QStackedWidget()
@@ -162,14 +168,19 @@ class MainWindow(QMainWindow):
         self.pause_s = self.pause_scene()
         self.complete_s = self.complete_scene()
         self.card_s = self.study_cards()
+        self.card_e = self.edit_studyset()
         self.stacked_widget.addWidget(self.title_s)
         self.stacked_widget.addWidget(self.study_s)
         self.stacked_widget.addWidget(self.pause_s)
         self.stacked_widget.addWidget(self.complete_s)
         self.stacked_widget.addWidget(self.card_s)
+        self.stacked_widget.addWidget(self.card_e)
 
         self.stacked_widget.currentChanged.connect(self.on_page_changed)
         self.stacked_widget.setCurrentIndex(0)
+
+        self.setMaximumHeight(9999)
+        self.setMaximumWidth(9999)
 
     def title_scene(self):
         self.flag = False
@@ -318,9 +329,8 @@ class MainWindow(QMainWindow):
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         
-        self.edit_studyset = QPushButton("Edit Study Set (implemented in future)")
-        self.edit_studyset.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(4))
-        layout.addWidget(self.edit_studyset)
+        self.edit_studysetbtn = QPushButton("Edit Study Set ")
+        self.edit_studysetbtn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(5))
 
         # Set up question and answer labels
         self.question = QLabel("Question")
@@ -353,6 +363,7 @@ class MainWindow(QMainWindow):
         
         # Add the button layout to main layout
         layout.addLayout(button_layout)
+        layout.addWidget(self.edit_studysetbtn)
         
         # Connect signals
         show_a.clicked.connect(lambda: self.show_card())
@@ -387,14 +398,14 @@ class MainWindow(QMainWindow):
         self.answer.setText(answer)
 
     def load_studyset(self):
-        filename = "study_set.json"
-        if os.path.exists(filename):
-            with open(filename, 'r') as f:
+        self.sfilename = "study_set.json"
+        if os.path.exists(self.sfilename):
+            with open(self.sfilename, 'r') as f:
                 print(f)
                 cards = json.load(f)
                 return cards
         else:
-            with open(filename, 'w') as f:
+            with open(self.sfilename, 'w') as f:
                 cards = [
                     {
                         "friendly_name": "Sample Study Set",
@@ -408,8 +419,185 @@ class MainWindow(QMainWindow):
                 json.dump(cards, f)
                 return cards
         
+    def edit_studyset(self):
+            # Create the main scene widget with size constraints
+            scene = QWidget()
+            scene.setMinimumWidth(400)  # Match your window's minimum width
+            scene.setMinimumHeight(300)  # Match your window's minimum height
+            
+            # Remember the current window size
+            current_size = self.size()
+            
+            # Create main layout
+            main_layout = QVBoxLayout(scene)
+            main_layout.setContentsMargins(10, 10, 10, 10)
+            
+            # Create header
+            header_label = QLabel("Edit Study Set")
+            header_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+            main_layout.addWidget(header_label)
+            
+            # Create a scroll area to contain all card editing widgets
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)  # Important - allows the widget to resize with content
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            
+            # Set a fixed height for the scroll area to prevent window expansion
+            scroll_area.setMinimumHeight(200)
+            scroll_area.setMaximumHeight(200)  # This will force scrolling rather than expanding
+            
+            # Create the container widget for the scroll area
+            scroll_content = QWidget()
+            card_layout = QVBoxLayout(scroll_content)
+            card_layout.setSpacing(15)
+            
+            # Add existing cards to the layout
+            for i in range(len(self.study[0]["questions"])):
+                # Create a group box for each card
+                card_group = QWidget()
+                card_group_layout = QVBoxLayout(card_group)
+                card_group_layout.setContentsMargins(5, 5, 5, 10)
+                
+                # Add card number label
+                card_label = QLabel(f"Card {i+1}")
+                card_label.setStyleSheet("font-weight: bold;")
+                
+                # Add question and answer text edits
+                question = self.study[0]["questions"][i]["question"]
+                answer = self.study[0]["questions"][i]["answer"]
+                
+                question_label = QLabel("Question:")
+                question_edit = QTextEdit(f"{question}")
+                question_edit.setMaximumHeight(80)  # Limit height
+                
+                answer_label = QLabel("Answer:")
+                answer_edit = QTextEdit(f"{answer}")
+                answer_edit.setMaximumHeight(80)  # Limit height
+                
+                # Add widgets to the card group layout
+                card_group_layout.addWidget(card_label)
+                card_group_layout.addWidget(question_label)
+                card_group_layout.addWidget(question_edit)
+                card_group_layout.addWidget(answer_label)
+                card_group_layout.addWidget(answer_edit)
+                
+                # Add a line separator except for the last card
+                if i < len(self.study[0]["questions"]) - 1:
+                    separator = QFrame()
+                    separator.setFrameShape(QFrame.Shape.HLine)
+                    separator.setFrameShadow(QFrame.Shadow.Sunken)
+                    card_group_layout.addWidget(separator)
+                
+                # Add the card group to the main layout
+                card_layout.addWidget(card_group)
+            
+            # Set the scroll content and add it to the scroll area
+            scroll_area.setWidget(scroll_content)
+            
+            # Create form for adding new cards
+            new_card_widget = QWidget()
+            new_card_layout = QVBoxLayout(new_card_widget)
+            new_card_layout.setContentsMargins(0, 10, 0, 10)
+            
+            new_card_header = QLabel("Add New Card")
+            new_card_header.setStyleSheet("font-weight: bold;")
+            
+            self.new_question = QTextEdit()
+            self.new_question.setPlaceholderText("Enter new question...")
+            self.new_question.setMaximumHeight(60)
+            
+            self.new_answer = QTextEdit()
+            self.new_answer.setPlaceholderText("Enter new answer...")
+            self.new_answer.setMaximumHeight(60)
+            
+            new_card_layout.addWidget(new_card_header)
+            new_card_layout.addWidget(QLabel("Question:"))
+            new_card_layout.addWidget(self.new_question)
+            new_card_layout.addWidget(QLabel("Answer:"))
+            new_card_layout.addWidget(self.new_answer)
+            
+            # Create button layout at the bottom
+            button_layout = QHBoxLayout()
+            
+            add_btn = QPushButton("Add Card")
+            add_btn.clicked.connect(self.add_new_card)
+            
+            return_btn = QPushButton("Return to Study")
+            return_btn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(4))
+            
+            # Add buttons to button layout
+            button_layout.addWidget(add_btn)
+            button_layout.addWidget(return_btn)
+            
+            # Add all components to main layout
+            main_layout.addWidget(scroll_area)
+            main_layout.addWidget(new_card_widget)
+            main_layout.addLayout(button_layout)
+            
+            # Restore the original window size
+            self.resize(current_size)
+            
+            return scene
 
+    def add_new_card(self):
+        question = self.new_question.toPlainText()
+        answer = self.new_answer.toPlainText()
+        
+        if not question or not answer:
+            # Show error message
+            error_dialog = QDialog(self)
+            error_dialog.setWindowTitle("Error")
+            error_layout = QVBoxLayout(error_dialog)
+            error_layout.addWidget(QLabel("Please enter both question and answer."))
+            ok_button = QPushButton("OK")
+            ok_button.clicked.connect(error_dialog.accept)
+            error_layout.addWidget(ok_button)
+            error_dialog.exec()
+            return
+            
+        # Add the card
+        self.bck_add_card(question, answer)
+        
+        # Clear the input fields
+        self.new_question.clear()
+        self.new_answer.clear()
+        
+        # Refresh the edit view
+        current_index = self.stacked_widget.currentIndex()
+        new_edit_view = self.edit_studyset()
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(5))
+        self.stacked_widget.insertWidget(5, new_edit_view)
+        self.stacked_widget.setCurrentIndex(current_index)
+        
+        # Show confirmation
+        success_dialog = QDialog(self)
+        success_dialog.setWindowTitle("Success")
+        success_layout = QVBoxLayout(success_dialog)
+        success_layout.addWidget(QLabel("Card added successfully!"))
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(success_dialog.accept)
+        success_layout.addWidget(ok_button)
+        success_dialog.exec()
 
+    def bck_add_card(self, question, answer):
+        with open(self.sfilename, 'r') as f:
+            cards = json.load(f)
+        
+        # Append the new card to the first study set
+        cards[0]["questions"].append({
+            "question": question,
+            "answer": answer
+        })
+        
+        # Write the updated cards back to the file
+        with open(self.sfilename, 'w') as f:
+            json.dump(cards, f)
+        
+        # Update the study variable to reflect changes
+        self.study = cards
+        return cards
+        
     def clubs(self):
         """
         Creates the clubview layout, for online interactivity only
@@ -425,6 +613,8 @@ class MainWindow(QMainWindow):
         back_button = QPushButton("Back")
         back_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
         layout.addWidget(clubs)
+
+
     def on_page_changed(self, index):
         self.old_pg = self.stacked_widget.currentIndex()
         if index in [2, 3, 4]:
@@ -434,6 +624,12 @@ class MainWindow(QMainWindow):
                 timer_widget.setText(current_time)
             if index == 4:
                 self.timer_time = self.l_timer.text()
+        if index == 5:
+            self.width = 800
+            self.height = 600
+            self.resize(self.width, self.height)  # Actually resize the window
+
+
     
 
                 
