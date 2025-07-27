@@ -1,4 +1,4 @@
-import sys, os, playsound, json, datetime
+import sys, os, playsound, json, datetime #NoQA: F401, E401
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QPixmap
@@ -11,6 +11,9 @@ TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
 THIS_BREAK = 0
+
+#BETA FLAGS
+_TOGGLESM2 = False #Use the SM2 algorithm for flashcards
 
 #Woah you shouldn't be here
 #Viewing of this code is punishable by under copyrigt law. Due to the license of this project intentional bypassing of the PYARMOR project is a crime and can lead to legal action. 
@@ -167,7 +170,7 @@ class MainWindow(QMainWindow):
         self.study_s = self.study_scene()
         self.pause_s = self.pause_scene()
         self.complete_s = self.complete_scene()
-        self.card_s = self.study_cards()
+        self.card_s = self.basic_study_cards()
         self.card_e = self.edit_studyset()
         self.stacked_widget.addWidget(self.title_s)
         self.stacked_widget.addWidget(self.study_s)
@@ -313,10 +316,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(back_button)
         return scene
 
-    def study_cards(self):
+    def basic_study_cards(self):
         """
-        Create the study cards scene layout
+        Create the study cards scene layout FLASHCARDS
         """
+
         self.card_index = 0
         scene = QWidget()
         layout = QVBoxLayout(scene)
@@ -371,6 +375,7 @@ class MainWindow(QMainWindow):
         back_button.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
         
         return scene
+    
     def next_card(self):
         if self.answer.text() == "Answer Hidden":
             self.show_card()

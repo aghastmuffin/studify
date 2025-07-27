@@ -3,7 +3,9 @@ import json
 import subprocess
 import requests
 from pathlib import Path
-
+""" 
+Handler for cloud functionality
+"""
 def compare_versions(v1, v2):
     """
     Compare two version strings.
@@ -36,7 +38,7 @@ class UpdateChecker:
         
     def _get_current_version(self):
         """Get the current version from a local version file."""
-        version_file = Path(__file__).parent / "version.json"
+        version_file = Path(__file__).parent / "_version.json"
         
         if not version_file.exists():
             # Create version file if it doesn't exist
