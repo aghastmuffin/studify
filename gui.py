@@ -2,7 +2,7 @@ import sys, os, playsound, json, datetime #NoQA: F401, E401
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtWidgets import QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect# noqa: F401
+from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog)# noqa: F401
 import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
@@ -14,9 +14,9 @@ THIS_BREAK = 0
 
 #BETA FLAGS
 _TOGGLESM2 = False #Use the SM2 algorithm for flashcards
+_PRODFLAG = False
+#Heyo! I don't know how you found this source code, but please report it to levi@adsforafrica.me for a reward!
 
-#Woah you shouldn't be here
-#Viewing of this code is punishable by under copyrigt law. Due to the license of this project intentional bypassing of the PYARMOR project is a crime and can lead to legal action. 
 
 class TodoModel(QtCore.QAbstractListModel):
     def __init__(self, *args, todos=None, **kwargs):
@@ -197,6 +197,7 @@ class MainWindow(QMainWindow):
         # Create and configure the welcome title
         welcome_title = QLabel("Welcome to Studyify")
         welcome_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        creds = QLabel("Created By Levi B. 태선")
         welcome_title.setStyleSheet("font-size: 20px; font-weight: bold;")
         spacer = QSpacerItem(0, 100)
         start = QPushButton("Start")
@@ -207,12 +208,15 @@ class MainWindow(QMainWindow):
         start.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(1)))  # Switch to study scene
         flashcard.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(4)))  # Switch to flashcard scene
         layout.addWidget(welcome_title)
+        layout.addWidget(QLabel("A Study App for Students"))
         layout.addSpacerItem(spacer)
         layout.addWidget(start)
         layout.addWidget(self.clock_l)
         layout.addWidget(flashcard)
         statsholder.addWidget(stats)
         statsholder.setAlignment(Qt.AlignmentFlag.AlignRight)
+        statsholder.addWidget(creds)
+        statsholder.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(statsholder)
         
@@ -320,14 +324,15 @@ class MainWindow(QMainWindow):
         """
         Create the study cards scene layout FLASHCARDS
         """
-
+        
         self.card_index = 0
         scene = QWidget()
         layout = QVBoxLayout(scene)
         
         # Get study set data
-        self.study = self.load_studyset()
-        
+        self.studytmp = self.load_studyset()
+        print(type(self.studytmp), self.studytmp)
+        self.study = self.studytmp[0]
         # Set up title
         title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -403,12 +408,18 @@ class MainWindow(QMainWindow):
         self.answer.setText(answer)
 
     def load_studyset(self):
-        self.sfilename = "study_set.json"
+        #convert to directory
+        self.sfilename = "studify/studysets/study_set_test.json"
         if os.path.exists(self.sfilename):
             with open(self.sfilename, 'r') as f:
                 print(f)
                 cards = json.load(f)
-                return cards
+                try:
+                    if "SM2" in cards[1]["flags"]:
+                        return [cards, True]
+                except IndexError:
+                    cards.append({"flags": ["NON-SM2"]})
+                    return [cards, False]
         else:
             with open(self.sfilename, 'w') as f:
                 cards = [
@@ -422,7 +433,8 @@ class MainWindow(QMainWindow):
                     }
                 ]
                 json.dump(cards, f)
-                return cards
+                return [cards, False]  # Return consistent format
+        raise FileNotFoundError(f"Study set file '{self.sfilename}' not found. Please create a study set first.")
         
     def edit_studyset(self):
             # Create the main scene widget with size constraints
@@ -464,6 +476,10 @@ class MainWindow(QMainWindow):
                 card_group_layout = QVBoxLayout(card_group)
                 card_group_layout.setContentsMargins(5, 5, 5, 10)
                 
+                del_btn = QPushButton(f"Delete Card {i+1}")
+                del_btn.clicked.connect(lambda _, i=i: self.rm_card(i))
+                card_group_layout.addWidget(del_btn)
+
                 # Add card number label
                 card_label = QLabel(f"Card {i+1}")
                 card_label.setStyleSheet("font-weight: bold;")
@@ -544,7 +560,10 @@ class MainWindow(QMainWindow):
             self.resize(current_size)
             
             return scene
-
+    def rm_card(self, i:int):
+        with open(self.sfilename, 'w') as f:
+            json.dump(self.study, f)
+        
     def add_new_card(self):
         question = self.new_question.toPlainText()
         answer = self.new_answer.toPlainText()
@@ -560,6 +579,7 @@ class MainWindow(QMainWindow):
             error_layout.addWidget(ok_button)
             error_dialog.exec()
             return
+            
             
         # Add the card
         self.bck_add_card(question, answer)
