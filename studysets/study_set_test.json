@@ -1,13 +1,1 @@
-[
-    {"friendly_name": "SM2 COMPATIBLE STUDYSET",
-    "questions": 
-        [
-            {"question": "What is the capital of France?", "answer": "Paris", "EF": 2.5, "interval": 0, "repetitions": 0, "quality":0, "next review":"", "last review": "","due_date": "2023-10-01"}, 
-            {"question": "What is 2 + 2?", "answer": "4", "EF": 2.5, "interval": 0, "repetitions": 0, "quality":"", "next review":"", "due_date": "2023-10-01"}, 
-            {"question": "What is the largest planet in our solar system?", "answer": "Jupiter", "EF": 2.5, "interval": 0, "repetitions": 0, "quality":0, "next review":0, "due_date": "2023-10-01"}
-        ],
-        "flags": [
-            "SM2"
-        ]
-    }
-]
+[{"friendly_name": "SM2 COMPATIBLE STUDYSET", "questions": [{"question": "What is the capital of France?", "answer": "Paris", "EF": 2.5, "interval": 0, "repetitions": 0, "quality": 0, "next review": "", "last review": "", "due_date": "2023-10-01"}, {"question": "What is 2 + 2?", "answer": "4", "EF": 2.5, "interval": 0, "repetitions": 0, "quality": "", "next review": "", "due_date": "2023-10-01"}, {"question": "What is the largest planet in our solar system?", "answer": "Jupiter", "EF": 2.5, "interval": 0, "repetitions": 0, "quality": 0, "next review": 0, "due_date": "2023-10-01"}], "flags": ["SM2"]}, {"flags": ["NON-SM2"]}]

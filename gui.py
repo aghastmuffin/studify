@@ -331,7 +331,6 @@ class MainWindow(QMainWindow):
         
         # Get study set data
         self.studytmp = self.load_studyset()
-        print(type(self.studytmp), self.studytmp)
         self.study = self.studytmp[0]
         # Set up title
         title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
@@ -417,10 +416,17 @@ class MainWindow(QMainWindow):
                 try:
                     if "SM2" in cards[1]["flags"]:
                         return [cards, True]
+                    else:
+                        # cards[1] exists but doesn't have SM2 flag
+                        return [cards, False]
                 except IndexError:
+                    # cards[1] doesn't exist, so add it
                     cards.append({"flags": ["NON-SM2"]})
                     return [cards, False]
         else:
+            # Create the directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.sfilename), exist_ok=True)
+            
             with open(self.sfilename, 'w') as f:
                 cards = [
                     {
@@ -434,7 +440,7 @@ class MainWindow(QMainWindow):
                 ]
                 json.dump(cards, f)
                 return [cards, False]  # Return consistent format
-        raise FileNotFoundError(f"Study set file '{self.sfilename}' not found. Please create a study set first.")
+            
         
     def edit_studyset(self):
             # Create the main scene widget with size constraints
@@ -560,9 +566,38 @@ class MainWindow(QMainWindow):
             self.resize(current_size)
             
             return scene
-    def rm_card(self, i:int):
-        with open(self.sfilename, 'w') as f:
-            json.dump(self.study, f)
+    def rm_card(self, i: int):
+        # Create confirmation dialog
+        rm_conf = QDialog(self)
+        rm_conf.setWindowTitle("Confirm Deletion")
+        rm_layout = QVBoxLayout(rm_conf)
+        rm_layout.addWidget(QLabel(f"Are you sure you want to delete card {i+1}?"))
+        rm_layout.addWidget(QLabel("This action cannot be undone."))
+        
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No)
+        button_box.accepted.connect(rm_conf.accept)
+        button_box.rejected.connect(rm_conf.reject)
+        rm_layout.addWidget(button_box)
+        
+        # Show dialog and check result
+        result = rm_conf.exec()
+        
+        if result == QDialog.DialogCode.Accepted:
+            # User confirmed deletion - remove the card
+            if 0 <= i < len(self.study[0]["questions"]):
+                del self.study[0]["questions"][i]
+                
+                # Save the updated data to file
+                with open(self.sfilename, 'w') as f:
+                    json.dump(self.study, f)
+                
+                # Refresh the edit view to reflect changes
+                current_index = self.stacked_widget.currentIndex()
+                new_edit_view = self.edit_studyset()
+                self.stacked_widget.removeWidget(self.stacked_widget.widget(5))
+                self.stacked_widget.insertWidget(5, new_edit_view)
+                self.stacked_widget.setCurrentIndex(current_index)
+        
         
     def add_new_card(self):
         question = self.new_question.toPlainText()
