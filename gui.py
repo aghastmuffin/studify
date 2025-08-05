@@ -2,7 +2,7 @@ import sys, os, playsound, json, datetime #NoQA: F401, E401
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog)# noqa: F401
+from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog, QSlider)# noqa: F401
 import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
@@ -318,6 +318,68 @@ class MainWindow(QMainWindow):
         layout.addWidget(complete_timer)
         layout.addWidget(self.clock_l)
         layout.addWidget(back_button)
+        return scene
+
+    def sm2_study_cards(self):
+        """
+        Create the study cards scene layout using SM2 algorithm
+        """
+
+        self.card_index = 0
+        scene = QWidget()
+        layout = QVBoxLayout(scene)
+        
+        # Get study set data
+        self.studytmp = self.load_studyset()
+        self.study = self.studytmp[0]
+        
+        # Set up title
+        title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
+        title.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        self.edit_studysetbtn = QPushButton("Edit Study Set ")
+        self.edit_studysetbtn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(5))
+
+        # Set up question and answer labels
+        self.question = QLabel("Question")
+        self.question.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.question.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        self.answer = QLabel("Answer Hidden")
+        self.answer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.answer.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        # Add the main content to the layout
+        layout.addWidget(title)
+        layout.addWidget(self.question)
+        layout.addWidget(self.answer)
+        
+        # Create buttons layout (horizontal) instead of table
+        button_layout = QHBoxLayout()
+        
+        #create easiness slider 0=hard 5=easy
+        slider = QSlider(Qt.Orientation.Horizontal, self)
+        slider.setGeometry(50,50, 200, 50)
+        slider.setMinimum(0)
+        slider.setMaximum(5)
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        slider.setTickInterval(1)
+        slider.setSingleStep(1)
+
+
+        # Add buttons to the horizontal layout
+        button_layout.addWidget(slider)
+        showans = QPushButton("Show Answer")
+        showans.clicked.connect(lambda: self.sm2_s())
+        
+        # Add the button layout to main layout
+        layout.addLayout(button_layout)
+        layout.addWidget(self.edit_studysetbtn)
+        
+        # Connect signals
+        
+        
         return scene
 
     def basic_study_cards(self):
