@@ -380,7 +380,7 @@ class MainWindow(QMainWindow):
         self.sm2slider.setTickInterval(1)
         self.sm2slider.setSingleStep(1)
         self.sm2slider.valueChanged.connect(self.change_slider_event)
-        showans = QPushButton("Show Answer")
+        showans = QPushButton("Show Answer") #change button
         showans.clicked.connect(lambda: self.show_card())
         
         # Add buttons to the horizontal layout
