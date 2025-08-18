@@ -2,11 +2,14 @@ import sys, os, playsound, json, datetime #NoQA: F401, E401
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog, QSlider)# noqa: F401
+from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog, QSlider, QCheckBox)# noqa: F401
 import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
 app = QApplication(sys.argv)
+
+DEVELOPER = True #turn off for prod
+
 TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
@@ -50,7 +53,7 @@ class TodoManager:
                             except ValueError:
                                 pass  # Keep as string if invalid date
                     return todos
-            except:
+            except:  # noqa: E722
                 return []
         return []
 
@@ -166,18 +169,21 @@ class MainWindow(QMainWindow):
         self.timer.start(1000)
         self.l_timer.setText("00:00")
 
+        #expose scenes
         self.title_s = self.title_scene()
         self.study_s = self.study_scene()
         self.pause_s = self.pause_scene()
         self.complete_s = self.complete_scene()
         self.card_s = self.basic_study_cards()
         self.card_e = self.edit_studyset()
+        self.study_sm2 = self.sm2_study_cards()
         self.stacked_widget.addWidget(self.title_s)
         self.stacked_widget.addWidget(self.study_s)
         self.stacked_widget.addWidget(self.pause_s)
         self.stacked_widget.addWidget(self.complete_s)
         self.stacked_widget.addWidget(self.card_s)
         self.stacked_widget.addWidget(self.card_e)
+        self.stacked_widget.addWidget(self.study_sm2)
 
         self.stacked_widget.currentChanged.connect(self.on_page_changed)
         self.stacked_widget.setCurrentIndex(0)
@@ -203,12 +209,15 @@ class MainWindow(QMainWindow):
         start = QPushButton("Start")
         stats = QPushButton("Stats")
         flashcard = QPushButton("Start Flashcards")
+        motto = QLabel("A Study App for Students")
+
         
         
         start.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(1)))  # Switch to study scene
-        flashcard.clicked.connect(lambda: (self.stacked_widget.setCurrentIndex(4)))  # Switch to flashcard scene
+        flashcard.clicked.connect(lambda: self.determine_studyscene())  # Switch to proper flashcard scene
         layout.addWidget(welcome_title)
-        layout.addWidget(QLabel("A Study App for Students"))
+        motto.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(motto)
         layout.addSpacerItem(spacer)
         layout.addWidget(start)
         layout.addWidget(self.clock_l)
@@ -221,7 +230,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(statsholder)
         
         return scene
-    
+    def determine_studyscene(self):
+        self.load_studyset()  # Ensure self.sm2 is up-to-date
+        if not self.sm2:
+            self.stacked_widget.setCurrentIndex(4)
+        else:
+            self.stacked_widget.setCurrentIndex(6)
     def study_scene(self):
         """
         Create the study scene layout
@@ -233,7 +247,7 @@ class MainWindow(QMainWindow):
         start_stop = QFormLayout()
         start_stop.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # Add a label to the study scene
-        goodluck = QLabel("Study Well")
+        goodluck = QLabel("Study Well 📖")
         
         goodluck.setAlignment(Qt.AlignmentFlag. AlignLeft)
         goodluck.setStyleSheet("font-size: 18px; font-weight: bold;")
@@ -322,23 +336,22 @@ class MainWindow(QMainWindow):
 
     def sm2_study_cards(self):
         """
-        Create the study cards scene layout using SM2 algorithm
+        Create the study cards scene layout for the SM2 algorithm
         """
-
+        
         self.card_index = 0
         scene = QWidget()
         layout = QVBoxLayout(scene)
         
         # Get study set data
-        self.studytmp = self.load_studyset()
-        self.study = self.studytmp[0]
+        self.study = self.load_studyset()
         
         # Set up title
-        title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
+        title = QLabel(f"(SM2) Study Set - {self.study[0]['friendly_name']}")
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         
-        self.edit_studysetbtn = QPushButton("Edit Study Set ")
+        self.edit_studysetbtn = QPushButton("Edit Study Set")
         self.edit_studysetbtn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(5))
 
         # Set up question and answer labels
@@ -355,32 +368,43 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.question)
         layout.addWidget(self.answer)
         
-        # Create buttons layout (horizontal) instead of table
-        button_layout = QHBoxLayout()
         
+        self.slider_friendly = QLabel("1 - Impossible")
+        self.slider_friendly.setAlignment(Qt.AlignmentFlag.AlignCenter)
         #create easiness slider 0=hard 5=easy
-        slider = QSlider(Qt.Orientation.Horizontal, self)
-        slider.setGeometry(50,50, 200, 50)
-        slider.setMinimum(0)
-        slider.setMaximum(5)
-        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        slider.setTickInterval(1)
-        slider.setSingleStep(1)
-
-
-        # Add buttons to the horizontal layout
-        button_layout.addWidget(slider)
+        self.sm2slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.sm2slider.setGeometry(50,50, 200, 50)
+        self.sm2slider.setMinimum(1)
+        self.sm2slider.setMaximum(5)
+        self.sm2slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.sm2slider.setTickInterval(1)
+        self.sm2slider.setSingleStep(1)
+        self.sm2slider.valueChanged.connect(self.change_slider_event)
         showans = QPushButton("Show Answer")
-        showans.clicked.connect(lambda: self.sm2_s())
+        showans.clicked.connect(lambda: self.show_card())
         
+        # Add buttons to the horizontal layout
+        layout.addWidget(self.slider_friendly)
+        layout.addWidget(self.sm2slider)
+        layout.addWidget(showans)
+
         # Add the button layout to main layout
-        layout.addLayout(button_layout)
         layout.addWidget(self.edit_studysetbtn)
         
-        # Connect signals
-        
-        
+
         return scene
+    
+    def change_slider_event(self, value):
+        if value == 1:
+            self.slider_friendly.setText(f"{value} - Impossible")
+        elif value == 2:
+            self.slider_friendly.setText(f"{value} - Hard")
+        elif value == 3:
+            self.slider_friendly.setText(f"{value} - Okay")
+        elif value == 4:
+            self.slider_friendly.setText(f"{value} - Easy")
+        elif value == 5:
+            self.slider_friendly.setText(f"{value} - Very Easy")
 
     def basic_study_cards(self):
         """
@@ -392,8 +416,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(scene)
         
         # Get study set data
-        self.studytmp = self.load_studyset()
-        self.study = self.studytmp[0]
+        self.study = self.load_studyset()
         # Set up title
         title = QLabel(f"Study Set - {self.study[0]['friendly_name']}")
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -470,17 +493,19 @@ class MainWindow(QMainWindow):
 
     def load_studyset(self):
         #convert to directory
-        self.sfilename = "studify/studysets/study_set_test.json"
+        self.sfilename = "study_set copy.json"
         if os.path.exists(self.sfilename):
             with open(self.sfilename, 'r') as f:
                 print(f)
                 cards = json.load(f)
                 try:
                     if "SM2" in cards[1]["flags"]:
-                        return [cards, True]
+                        print("sm2")
+                        self.sm2 = True
+                        return cards
                     else:
-                        # cards[1] exists but doesn't have SM2 flag
-                        return [cards, False]
+                        self.sm2 = False
+                        return cards
                 except IndexError:
                     # cards[1] doesn't exist, so add it
                     cards.append({"flags": ["NON-SM2"]})
@@ -516,11 +541,14 @@ class MainWindow(QMainWindow):
             # Create main layout
             main_layout = QVBoxLayout(scene)
             main_layout.setContentsMargins(10, 10, 10, 10)
-            
-            # Create header
+
+            # Create header + SM2 button
             header_label = QLabel("Edit Study Set")
             header_label.setStyleSheet("font-size: 16px; font-weight: bold;")
             main_layout.addWidget(header_label)
+
+            sm2_enabled = QCheckBox("Enable SM2 Algorithm on this set") #hook this in
+            main_layout.addWidget(sm2_enabled)
             
             # Create a scroll area to contain all card editing widgets
             scroll_area = QScrollArea()
@@ -536,6 +564,7 @@ class MainWindow(QMainWindow):
             scroll_content = QWidget()
             card_layout = QVBoxLayout(scroll_content)
             card_layout.setSpacing(15)
+            
             
             # Add existing cards to the layout
             for i in range(len(self.study[0]["questions"])):
@@ -816,7 +845,10 @@ def updatefunc():
 
 if __name__ == "__main__":
     # Use MainWindow instead of QWidget
-    updatefunc()
+    if DEVELOPER == False:
+        updatefunc()
+    else:
+        print("Warning, you are using STUDIFY in development mode, please flip the DEVELOPER varlible to true or delete it to disable developer mode. You are currently inelligble for updates.")
     window = MainWindow()
     window.show()
     app.exec()

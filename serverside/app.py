@@ -1,17 +1,16 @@
 from flask import Flask, request, jsonify
 import sqlite3, argon2
 from datetime import datetime
-#argon2 to not require salting
 
 
 app = Flask(__name__)
 p = argon2.PasswordHasher()
-
+upsince = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 @app.route('/')
 def index():
-    return 200
+    return f"Server Healthy since {upsince}", 200
 
 
 @app.route('/lease', methods=['POST'])
@@ -49,11 +48,11 @@ def _checklogin(conn, username, password):
     
     if user and p.verify(user[4], password):
         return user
-    return None
+    return "No User Found", 400
 
-def _get_data(conn, username):
+def _get_data(conn, username, *args):
     """
-    Retrieves user data from the users table based on the username.
+    Retrieves misc user data from the users table based on the username.
 
     Parameters:
         conn (sqlite3.Connection): The SQLite connection object.
@@ -62,8 +61,16 @@ def _get_data(conn, username):
     Returns:
         tuple: A tuple containing the user data if found, otherwise None.
     """
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE name=?', (username,))
+    if len(args) > 0:
+        for arg in args:
+            try:
+                c = conn.cursor()
+                c.execute(f'SELECT {arg} FROM users WHERE name=?', (username,)) #UNPROTECTED 
+            except sqlite3.OperationalError:
+                return f"Column {arg} does not exist in users table", 400
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM users WHERE name=?', (username,))
     return c.fetchone()
 
 def _create_user(conn, name, email, hashed_password, connstr, studytime, version="0.1"):
