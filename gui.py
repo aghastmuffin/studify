@@ -410,43 +410,66 @@ class MainWindow(QMainWindow):
         self.showans.clicked.connect(self.sm2_next_card)
 
     def sm2_next_card(self):
-        #apply sm2 algorithm new values to card
-        card = self.study[0]["questions"][self.card_index]
-        if not all(key in card for key in ["easiness", "interval", "repetitions", "review_datetime"]):
-            print("not all required values found")
-            print(card)
-            new_review = first_review(quality=self.sm2_difficulty)
-        else:
-            new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
-        with open(self.studyset_file, "r") as f:
-            tmpdata = json.load(f)
-        tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
-        tmpdata[0]["questions"][self.card_index]["interval"] = new_review['interval']
-        tmpdata[0]["questions"][self.card_index]["repetitions"] = new_review['repetitions']
-        tmpdata[0]["questions"][self.card_index]["review_datetime"] = new_review['review_datetime']
-        with open(self.studyset_file, "w") as f:
-            json.dump(tmpdata, f)
-        
-        # Reset button to original state
-        self.showans.setText("Show Answer")
-        try:
-            self.showans.clicked.disconnect()
-        except TypeError:
-            pass
-        self.showans.clicked.connect(self.sm2_show_card)
+            #apply sm2 algorithm new values to card
+            card = self.study[0]["questions"][self.card_index]
+            if not all(key in card for key in ["easiness", "interval", "repetitions", "review_datetime"]):
+                print("not all required values found")
+                print(card)
+                new_review = first_review(quality=self.sm2_difficulty)
+            else:
+                new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
+            with open(self.studyset_file, "r") as f:
+                tmpdata = json.load(f)
+            tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
+            tmpdata[0]["questions"][self.card_index]["interval"] = new_review['interval']
+            tmpdata[0]["questions"][self.card_index]["repetitions"] = new_review['repetitions']
+            tmpdata[0]["questions"][self.card_index]["review_datetime"] = new_review['review_datetime']
+            with open(self.studyset_file, "w") as f:
+                json.dump(tmpdata, f)
 
-        #next q logic
-        if self.answer.text() == "Answer Hidden":
-            self.show_card()
-            return
-        else:
-            if self.card_index + 1 == len(self.study[0]["questions"]):
-                self.card_index = 0
-            else: #switch if no more elligble cards are avaliable
-                self.card_index += 1 
-            self.reset_card()
-            return
-    
+            # Reset button to original state
+            self.showans.setText("Show Answer")
+            try:
+                self.showans.clicked.disconnect()
+            except TypeError:
+                pass
+            self.showans.clicked.connect(self.sm2_show_card)
+
+            #next q logic
+            if self.answer.text() == "Answer Hidden":
+                self.show_card()
+                return
+            else:
+                # Safe iteration to find next eligible card
+                questions = self.study[0]["questions"]
+                checked = 0
+                total = len(questions)
+                while checked < total:
+                    review_dt_str = questions[self.card_index].get("review_datetime")
+                    if review_dt_str:
+                        try:
+                            # Try with microseconds first
+                            review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S.%f")
+                        except ValueError:
+                            try:
+                                # Try without microseconds
+                                review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S")
+                            except Exception as e:
+                                print(f"Error parsing review_datetime: {e}")
+                                # If parsing fails, treat as eligible
+                                break
+                        if review_dt > dt.datetime.now():
+                            self.card_index = (self.card_index + 1) % total
+                            checked += 1
+                            continue
+                    break
+                if checked == total:
+                    print("No eligible cards to review.")
+                    # Optionally show a dialog or handle as needed
+                    return
+                self.reset_card()
+                return
+                
     def done_studying(self):
         scene = QWidget()
         layout = QVBoxLayout(scene)
