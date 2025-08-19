@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrol
 import PyQt6.QtCore as QtCore
 import datetime as dt
 import _cloud
+from supermemo2 import first_review, review
+
 app = QApplication(sys.argv)
 
 DEVELOPER = True #turn off for prod
@@ -407,6 +409,18 @@ class MainWindow(QMainWindow):
         self.showans.clicked.connect(self.sm2_next_card)
 
     def sm2_next_card(self):
+        #apply sm2 algorithm new values to card
+        card = self.study[0]["questions"][self.card_index]
+        new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
+        with open(self.studyset_file, "r") as f:
+            tmpdata = json.load(f)
+        tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
+        tmpdata[0]["questions"][self.card_index]["interval"] = new_review['interval']
+        tmpdata[0]["questions"][self.card_index]["repetitions"] = new_review['repetitions']
+        tmpdata[0]["questions"][self.card_index]["review_datetime"] = new_review['review_datetime']
+        with open(self.studyset_file, "w") as f:
+            json.dump(tmpdata, f)
+        
         # Reset button to original state
         self.showans.setText("Show Answer")
         try:
@@ -449,6 +463,7 @@ class MainWindow(QMainWindow):
             self.slider_friendly.setText(f"{value} - Easy")
         elif value == 5:
             self.slider_friendly.setText(f"{value} - Very Easy")
+        self.sm2_difficulty = value
 
     def basic_study_cards(self):
         """
@@ -538,9 +553,9 @@ class MainWindow(QMainWindow):
 
     def load_studyset(self):
         #convert to directory
-        self.sfilename = "study_set copy.json"
-        if os.path.exists(self.sfilename):
-            with open(self.sfilename, 'r') as f:
+        self.studyset_file = "study_set copy.json"
+        if os.path.exists(self.studyset_file):
+            with open(self.studyset_file, 'r') as f:
                 print(f)
                 cards = json.load(f)
                 try:
@@ -557,9 +572,9 @@ class MainWindow(QMainWindow):
                     return [cards, False]
         else:
             # Create the directory if it doesn't exist
-            os.makedirs(os.path.dirname(self.sfilename), exist_ok=True)
-            
-            with open(self.sfilename, 'w') as f:
+            os.makedirs(os.path.dirname(self.studyset_file), exist_ok=True)
+
+            with open(self.studyset_file, 'w') as f:
                 cards = [
                     {
                         "friendly_name": "Sample Study Set",
@@ -724,7 +739,7 @@ class MainWindow(QMainWindow):
                 del self.study[0]["questions"][i]
                 
                 # Save the updated data to file
-                with open(self.sfilename, 'w') as f:
+                with open(self.studyset_file, 'w') as f:
                     json.dump(self.study, f)
                 
                 # Refresh the edit view to reflect changes
@@ -777,7 +792,7 @@ class MainWindow(QMainWindow):
         success_dialog.exec()
 
     def bck_add_card(self, question, answer):
-        with open(self.sfilename, 'r') as f:
+        with open(self.studyset_file, 'r') as f:
             cards = json.load(f)
         
         # Append the new card to the first study set
@@ -787,7 +802,7 @@ class MainWindow(QMainWindow):
         })
         
         # Write the updated cards back to the file
-        with open(self.sfilename, 'w') as f:
+        with open(self.studyset_file, 'w') as f:
             json.dump(cards, f)
         
         # Update the study variable to reflect changes
