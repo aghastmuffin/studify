@@ -14,10 +14,6 @@ TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
 THIS_BREAK = 0
-
-#BETA FLAGS
-_TOGGLESM2 = False #Use the SM2 algorithm for flashcards
-_PRODFLAG = False
 #Heyo! I don't know how you found this source code, but please report it to levi@adsforafrica.me for a reward!
 
 
