@@ -130,6 +130,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.studyset_file = ""
+        self.sm2_difficulty = 1
         self.old_pg = 0
         self.todomgr = TodoManager()
         self.timer_time = ""
@@ -232,7 +234,6 @@ class MainWindow(QMainWindow):
         return scene
     
     def determine_studyscene(self):
-        self.load_studyset()  # Ensure self.sm2 is up-to-date
         if not self.sm2:
             self.stacked_widget.setCurrentIndex(4)
         else:
@@ -411,7 +412,12 @@ class MainWindow(QMainWindow):
     def sm2_next_card(self):
         #apply sm2 algorithm new values to card
         card = self.study[0]["questions"][self.card_index]
-        new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
+        if not all(key in card for key in ["easiness", "interval", "repetitions", "review_datetime"]):
+            print("not all required values found")
+            print(card)
+            new_review = first_review(quality=self.sm2_difficulty)
+        else:
+            new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
         with open(self.studyset_file, "r") as f:
             tmpdata = json.load(f)
         tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
