@@ -228,6 +228,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(statsholder)
         
         return scene
+    
     def determine_studyscene(self):
         self.load_studyset()  # Ensure self.sm2 is up-to-date
         if not self.sm2:
