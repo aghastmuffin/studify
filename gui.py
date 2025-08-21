@@ -429,15 +429,21 @@ class MainWindow(QMainWindow):
             pass
         self.showans.clicked.connect(self.sm2_next_card)
  
-    def sm2_next_card(self): #FIXME
+    def sm2_next_card(self): #XXX
+            print("next card")
             #apply sm2 algorithm new values to card
             card = self.study[0]["questions"][self.card_index]
-            if not all(key in card for key in ["easiness", "interval", "repetitions", "review_datetime"]):
+            print(card)
+            required_keys = ["easiness", "interval", "repetitions", "review_datetime"]
+            missing_keys = [key for key in required_keys if key not in card]
+            if missing_keys:
                 print("not all required values found")
-                print(card)
+                print("Missing keys:", missing_keys)
+                print("Card:", card)
                 new_review = first_review(quality=self.sm2_difficulty)
             else:
                 new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
+            
             with open(self.studyset_file, "r") as f:
                 tmpdata = json.load(f)
             tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
@@ -454,41 +460,37 @@ class MainWindow(QMainWindow):
             except TypeError:
                 pass
             self.showans.clicked.connect(self.sm2_show_card)
-
+            
             #next q logic
-            if self.answer.text() == "Answer Hidden":
-                self.show_card()
-                return
-            else:
-                # Safe iteration to find next eligible card
-                questions = self.study[0]["questions"]
-                checked = 0
-                total = len(questions)
-                while checked < total:
-                    review_dt_str = questions[self.card_index].get("review_datetime")
-                    if review_dt_str:
+            questions = self.study[0]["questions"]
+            total = len(questions)
+            advanced = False
+            for _ in range(total):
+                self.card_index = (self.card_index + 1) % total
+                review_dt_str = questions[self.card_index].get("review_datetime")
+                if review_dt_str:
+                    try:
+                        review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S.%f")
+                    except ValueError:
                         try:
-                            # Try with microseconds first
-                            review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S.%f")
-                        except ValueError:
-                            try:
-                                # Try without microseconds
-                                review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S")
-                            except Exception as e:
-                                print(f"Error parsing review_datetime: {e}")
-                                # If parsing fails, treat as eligible
-                                break
-                        if review_dt > dt.datetime.now():
-                            self.card_index = (self.card_index + 1) % total
-                            checked += 1
-                            continue
+                            review_dt = dt.datetime.strptime(review_dt_str, "%Y-%m-%d %H:%M:%S")
+                        except Exception as e:
+                            print(f"Error parsing review_datetime: {e}")
+                            review_dt = None
+                    # If review_dt is None or in the past, show this card
+                    if not review_dt or review_dt <= dt.datetime.now():
+                        advanced = True
+                        break
+                else:
+                    # No review_datetime, show this card
+                    advanced = True
                     break
-                if checked == total:
-                    print("No more eligible cards to review.")
-                    # Optionally show a dialog or handle as needed
-                    return
+            if advanced:
+                print(f"Advancing to card {self.card_index}: {questions[self.card_index]['question']}")
                 self.reset_card()
-                return
+            else:
+                print("No more eligible cards to review.")
+                # Optionally show a dialog or handle as needed
                 
     def done_studying(self):
         scene = QWidget()
