@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(back_button)
         return scene
 
-    def sm2_study_cards(self):
+    def sm2_study_cards(self): #FIXME
         """
         Create the study cards scene layout for the SM2 algorithm
         """
@@ -370,6 +370,7 @@ class MainWindow(QMainWindow):
             title_text = f"(SM2) Study Set - {self.study[0]['friendly_name']}"
         else:
             title_text = "No Study Set Loaded"
+        
         title = QLabel(title_text)
         title.setAlignment(Qt.AlignmentFlag.AlignLeft)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
@@ -427,8 +428,8 @@ class MainWindow(QMainWindow):
         except TypeError:
             pass
         self.showans.clicked.connect(self.sm2_next_card)
-
-    def sm2_next_card(self):
+ 
+    def sm2_next_card(self): #FIXME
             #apply sm2 algorithm new values to card
             card = self.study[0]["questions"][self.card_index]
             if not all(key in card for key in ["easiness", "interval", "repetitions", "review_datetime"]):
@@ -483,7 +484,7 @@ class MainWindow(QMainWindow):
                             continue
                     break
                 if checked == total:
-                    print("No eligible cards to review.")
+                    print("No more eligible cards to review.")
                     # Optionally show a dialog or handle as needed
                     return
                 self.reset_card()
@@ -577,14 +578,18 @@ class MainWindow(QMainWindow):
 
 
     def next_card(self):
+        if not self.study or not isinstance(self.study, list) or len(self.study) == 0 or "questions" not in self.study[0] or not self.study[0]["questions"]:
+            self.question.setText("No study set loaded.")
+            self.answer.setText("")
+            return
+        questions = self.study[0]["questions"]
         if self.answer.text() == "Answer Hidden":
             self.show_card()
+            print(f"Showing card {self.card_index}: {questions[self.card_index]['question']}")
             return
         else:
-            if self.card_index + 1 == len(self.study[0]["questions"]):
-                self.card_index = 0
-            else:
-                self.card_index += 1 
+            self.card_index = (self.card_index + 1) % len(questions)
+            print(f"Advancing to card {self.card_index}: {questions[self.card_index]['question']}")
             self.reset_card()
             return
 
@@ -604,9 +609,17 @@ class MainWindow(QMainWindow):
 
     def load_studyset(self):
         if os.path.exists(self.studyset_file):
+            print("studyset found at", self.studyset_file)
+            print("loading studyset")
             with open(self.studyset_file, 'r') as f:
                 print(f)
-                cards = json.load(f)
+                try:
+                    cards = json.load(f)
+                except json.JSONDecodeError as e: #HACK
+                    print("COULD NOT LOAD JSON")
+                    self.stacked_widget.setCurrentIndex(1)
+                    return
+                print(cards)
                 try:
                     if "SM2" in cards[1]["flags"]:
                         print("sm2")
@@ -673,6 +686,7 @@ class MainWindow(QMainWindow):
             # Add existing cards to the layout
             print(self.sm2, self.study)
             print(self.study, type(self.study))
+
             if not self.study or not isinstance(self.study, list) or len(self.study) == 0 or "questions" not in self.study[0] or not self.study[0]["questions"]:
                 card_label = QLabel("No study set loaded.")
                 card_layout.addWidget(card_label)
