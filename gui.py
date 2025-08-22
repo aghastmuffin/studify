@@ -366,7 +366,7 @@ class MainWindow(QMainWindow):
         self.sm2layout = QVBoxLayout(scene)
 
         # Safe title for SM2 scene
-        if self.study and len(self.study) > 0 and 'friendly_name' in self.study[0]:
+        if self.study and len(self.study) > 0 and 'friendly_name' in self.study[0]: #TODO: set to self variable so it can be modified in func load_studyscene dynamically changing
             title_text = f"(SM2) Study Set - {self.study[0]['friendly_name']}"
         else:
             title_text = "No Study Set Loaded"
@@ -377,6 +377,9 @@ class MainWindow(QMainWindow):
 
         self.edit_studysetbtn = QPushButton("Edit Study Set")
         self.edit_studysetbtn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(5))
+
+        return_home = QPushButton("Return Home")
+        return_home.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
 
         # Set up question and answer labels
         self.question = QLabel("Question")
@@ -410,7 +413,7 @@ class MainWindow(QMainWindow):
         self.sm2layout.addWidget(self.slider_friendly)
         self.sm2layout.addWidget(self.sm2slider)
         self.sm2layout.addWidget(self.showans)
-
+        self.sm2layout.addWidget(return_home)
         # Add the button layout to main layout
         self.sm2layout.addWidget(self.edit_studysetbtn)
 
@@ -429,7 +432,7 @@ class MainWindow(QMainWindow):
             pass
         self.showans.clicked.connect(self.sm2_next_card)
  
-    def sm2_next_card(self): #XXX
+    def sm2_next_card(self): #HACK
             print("next card")
             #apply sm2 algorithm new values to card
             card = self.study[0]["questions"][self.card_index]
@@ -443,7 +446,6 @@ class MainWindow(QMainWindow):
                 new_review = first_review(quality=self.sm2_difficulty)
             else:
                 new_review = review(self.sm2_difficulty, card['easiness'], card['interval'], card['repetitions'], card['review_datetime'])
-            
             with open(self.studyset_file, "r") as f:
                 tmpdata = json.load(f)
             tmpdata[0]["questions"][self.card_index]["easiness"] = new_review['easiness']
@@ -768,7 +770,7 @@ class MainWindow(QMainWindow):
             add_btn.clicked.connect(self.add_new_card)
             
             return_btn = QPushButton("Return to Study")
-            return_btn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(4))
+            return_btn.clicked.connect(lambda: self.determine_studyscene)
             
             # Add buttons to button layout
             button_layout.addWidget(add_btn)
