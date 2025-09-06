@@ -9,23 +9,44 @@ payload = jwt.decode(id_token, options={"verify_signature": False})
 uid = payload["user_id"]
 
 url = f"https://firestore.googleapis.com/v1/projects/studify-storage/databases/(default)/documents/users/{uid}"
-
+vault_url = f"https://firestore.googleapis.com/v1/projects/studify-storage/databases/(default)/documents/users/{uid}/private/vault"
 headers = {
     "Authorization": f"Bearer {id_token}",
     "Content-Type": "application/json"
 }
 
-def create_user_fields(email, displayname):
-    data = {
+def create_user_fields(email, displayname, user_id):
+    # 1. Create main user doc
+    user_data = {
         "fields": {
             "email": {"stringValue": email},
             "displayName": {"stringValue": displayname},
             "study_time_sec": {"integerValue": 0},
-            "createdAt": {"timestampValue": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='microseconds').replace('+00:00', 'Z')}
+            "createdAt": {
+                "timestampValue": datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(timespec="microseconds").replace("+00:00", "Z")
+            },
         }
     }
-    r = requests.patch(url, json=data, headers=headers)
-    return r.json()
+    user_url = f"{url}/users/{user_id}"
+    r1 = requests.patch(user_url, json=user_data, headers=headers)
+
+    # 2. Create private/vault subdoc
+    vault_data = {
+        "fields": {
+            "email": {"stringValue": email},
+            "createdAt": {
+                "timestampValue": datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(timespec="microseconds").replace("+00:00", "Z")
+            },
+        }
+    }
+    vault_url = f"{url}/users/{user_id}/private/vault"
+    r2 = requests.patch(vault_url, json=vault_data, headers=headers)
+
+    return r1.json(), r2.json()
 
 def update_username(displayname):
     data = {
@@ -51,3 +72,7 @@ def update_studytime(sec):
     }
     r = requests.patch(url, json=data, headers=headers)
     return r.json()
+
+def reauth():
+    import studify._authflask as _authflask
+    _authflask.start_server()

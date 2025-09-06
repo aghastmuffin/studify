@@ -3,11 +3,16 @@ import webbrowser
 from flask import Flask, request
 import threading, os
 import signal
+import threading 
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
+    if threading.current_thread() == threading.main_thread():
+        print("[authflask]: WARNING - Running Flask on the main thread may cause issues.")
+
+
     return """<!DOCTYPE html>
 <html>
 <head>
@@ -37,7 +42,10 @@ def index():
         body: "idtoken=" + encodeURIComponent(idToken)
         })
         .then(() => alert("Token sent!"))
-        .catch(err => alert("Failed to send token: " + err.message + " Copy this: " + idToken));
+        .catch(async err => {
+          await navigator.clipboard.writeText(idToken);
+          alert("Failed to send token: (We've copied it to your clipboard) " + err.message + " Copy this and paste into token.txt: " + idToken);
+        });
       }} catch (err) {{
         alert("Login failed: " + err.message);
         console.error("Login error:", err);
@@ -54,14 +62,32 @@ def creds():
     with open("token.txt", "w") as f:
         f.write(id_token)
         f.close()
-        threading.Timer(1, lambda: os.kill(os.getpid(), signal.SIGTERM)).start()
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func is None:
+            print("[authflask]: NOT RUNNING WITH WERKZEUG")
+            threading.Timer(1, lambda: os.kill(os.getpid(), signal.SIGINT)).start() #not running werkzeug, just kill program
+        func()
+        return #server dead
+
+        
 
 
+
+
+def start_server():
+    threading.Thread(target=webbrowser.open("http://localhost:8000/")).start()
+    try:
+        app.run(debug=False, host="localhost", port=8000)
+    except KeyboardInterrupt as e:
+        return 
+    except Exception as e:
+        print("[authflask]: Error occurred while running the server:", e)
+        return
 
 
 if __name__ == "__main__":
-  def open_browser():
-    webbrowser.open("http://localhost:8000/")
+    def open_browser():
+        webbrowser.open("http://localhost:8000/")
 
-  threading.Thread(target=open_browser).start()
-  app.run(debug=False, host="localhost", port=8000)
+    threading.Thread(target=open_browser).start()
+    app.run(debug=False, host="localhost", port=8000)
