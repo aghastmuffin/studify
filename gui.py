@@ -453,6 +453,7 @@ class MainWindow(QMainWindow):
             tmpdata[0]["questions"][self.card_index]["review_datetime"] = new_review['review_datetime']
             with open(self.studyset_file, "w") as f:
                 json.dump(tmpdata, f)
+            self.study = tmpdata #update local data
 
             # Reset button to original state
             self.showans.setText("Show Answer")
@@ -498,6 +499,7 @@ class MainWindow(QMainWindow):
 
         done = QLabel("All Done!")
         return_home = QPushButton("Return Home")
+        return_home.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(0))
         layout.addWidget(done)
         layout.addWidget(return_home)
 
