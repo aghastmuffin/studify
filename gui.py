@@ -356,7 +356,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(back_button)
         return scene
 
-    def sm2_study_cards(self): #FIXME
+    def sm2_study_cards(self): #FIXME: Doesn't Update data properly, shows cards that shouldn't be shown
         """
         Create the study cards scene layout for the SM2 algorithm
         """
@@ -490,8 +490,7 @@ class MainWindow(QMainWindow):
                 print(f"Advancing to card {self.card_index}: {questions[self.card_index]['question']}")
                 self.reset_card()
             else:
-                print("No more eligible cards to review.")
-                # Optionally show a dialog or handle as needed
+                self.stacked_widget.setCurrentIndex(7)  # Switch to done scene
                 
     def done_studying(self):
         scene = QWidget()
@@ -974,18 +973,6 @@ if __name__ == "__main__":
     # Use MainWindow instead of QWidget
     if DEVELOPER == False:
         updatefunc()
-        for path in DEP_FILES:
-            full_path = os.path.join(os.getcwd(), path)
-
-            if os.path.splitext(path)[1]:  
-                # Has a file extension -> treat as file
-                os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                if not os.path.exists(full_path):
-                    with open(full_path, "w") as f:
-                        pass  # create empty file
-            else:
-                # No extension -> treat as directory
-                os.makedirs(full_path, exist_ok=True)
     else:
         print("Warning, you are using STUDIFY in development mode, please flip the DEVELOPER variable to true or delete it to disable developer mode. You are currently ineligible for updates.")
     window = MainWindow()
