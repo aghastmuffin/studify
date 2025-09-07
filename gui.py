@@ -13,7 +13,7 @@ app = QApplication(sys.argv)
 #This application is signed under com.adsforafrica.levi, this is a private domain and not technically registered under afa
 
 DEVELOPER = False #turn off for prod
-
+DEP_FILES = ["todo.json", "/studysets", "/assets", "_cloud.py", "_data.py"]
 TOTAL_STUDY = 0
 TOTAL_BREAK = 0
 THIS_STUDY = 0
@@ -60,7 +60,6 @@ class TodoManager:
 
         
     def save_todos(self):
-        # Create a copy of todos to modify for saving
         todos_to_save = []
         
         # Convert any date objects to strings
@@ -341,7 +340,7 @@ class MainWindow(QMainWindow):
         completed = QLabel("Good Job!")
         completed.setAlignment(Qt.AlignmentFlag.AlignLeft)
         completed.setStyleSheet("font-size: 18px; font-weight: bold;")
-        quick_stat = QLabel("You studied for: ")
+        quick_stat = QLabel("You studied for: ") #TODO: Implement cloud sync
         quick_stat.setAlignment(Qt.AlignmentFlag.AlignCenter)
         quick_stat.setStyleSheet("font-size: 22px; font-weight: bold;")
         back_button = QPushButton("Restart")
@@ -975,8 +974,20 @@ if __name__ == "__main__":
     # Use MainWindow instead of QWidget
     if DEVELOPER == False:
         updatefunc()
+        for path in DEP_FILES:
+            full_path = os.path.join(os.getcwd(), path)
+
+            if os.path.splitext(path)[1]:  
+                # Has a file extension -> treat as file
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                if not os.path.exists(full_path):
+                    with open(full_path, "w") as f:
+                        pass  # create empty file
+            else:
+                # No extension -> treat as directory
+                os.makedirs(full_path, exist_ok=True)
     else:
-        print("Warning, you are using STUDIFY in development mode, please flip the DEVELOPER varlible to true or delete it to disable developer mode. You are currently inelligble for updates.")
+        print("Warning, you are using STUDIFY in development mode, please flip the DEVELOPER variable to true or delete it to disable developer mode. You are currently ineligible for updates.")
     window = MainWindow()
     window.show()
     app.exec()
