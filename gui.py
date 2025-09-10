@@ -973,7 +973,7 @@ def updatefunc():
 
 if __name__ == "__main__":
     # Use MainWindow instead of QWidget
-    if DEVELOPER == False:
+    if not DEVELOPER:
         updatefunc()
     else:
         print("Warning, you are using STUDIFY in development mode, please flip the DEVELOPER variable to true or delete it to disable developer mode. You are currently ineligible for updates.")
