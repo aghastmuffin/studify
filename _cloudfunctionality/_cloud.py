@@ -3,9 +3,12 @@ import json
 import subprocess
 import requests
 from pathlib import Path
+
 """ 
 Handler for cloud functionality
 """
+
+
 def compare_versions(v1, v2):
     """
     Compare two version strings.
@@ -90,8 +93,9 @@ class UpdateChecker:
             }
     
     def is_git_repo(self):
-        """Check if current directory is a git repository."""
-        return os.path.exists(Path(__file__).parent / ".git")
+        """Check if parent directory is a git repository."""
+        parent_dir = Path(__file__).parent.parent
+        return os.path.exists(parent_dir / ".git")
     
     def update(self):
         """Update the application using git pull."""
