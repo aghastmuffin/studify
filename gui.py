@@ -5,7 +5,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (QFormLayout, QTableWidget, QTableWidgetItem, QScrollArea, QFrame, QTextEdit, QDialog, QDialogButtonBox, QStackedWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox, QMainWindow, QSpacerItem, QSizePolicy, QGraphicsOpacityEffect, QFileDialog, QSlider, QCheckBox)# noqa: F401
 import PyQt6.QtCore as QtCore
 import datetime as dt
-import _cloud
+from _cloudfunctionality import _cloud
 from supermemo2 import first_review, review
 
 app = QApplication(sys.argv)

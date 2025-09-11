@@ -74,5 +74,5 @@ def update_studytime(sec):
     return r.json()
 
 def reauth():
-    import studify._authflask as _authflask
+    import studify._cloud._authflask as _authflask
     _authflask.start_server()
