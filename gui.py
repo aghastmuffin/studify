@@ -8,6 +8,7 @@ import datetime as dt
 from _cloudfunctionality import _cloud
 from supermemo2 import first_review, review
 
+
 app = QApplication(sys.argv)
 
 #This application is signed under com.adsforafrica.levi, this is a private domain and not technically registered under afa
