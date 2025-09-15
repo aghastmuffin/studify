@@ -1,0 +1,6 @@
+PyQt6
+supermemo2
+requests
+flask
+jwt
+playsound
