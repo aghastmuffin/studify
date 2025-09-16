@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         self.study = []
         self.todomgr = TodoManager()
         self.timer_time = ""
-        self.setWindowTitle("Studify")
+        self.setWindowTitle("Studify - The simple study app.")
         icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "full-logo.png"))
         self.setWindowIcon(QIcon(QPixmap(icon_path)))
         self.setMinimumHeight(300)
@@ -215,6 +215,7 @@ class MainWindow(QMainWindow):
         welcome_title = QLabel("Welcome to Studyify")
         welcome_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         creds = QLabel("Created By Levi B. 태선")
+        withlove = QLabel("With ❤️ from Berkeley, CA, USA")
         welcome_title.setStyleSheet("font-size: 20px; font-weight: bold;")
         spacer = QSpacerItem(0, 100)
         start = QPushButton("Start")
@@ -228,6 +229,7 @@ class MainWindow(QMainWindow):
         flashcard.clicked.connect(lambda: self.determine_studyscene())  # Switch to proper flashcard scene
         layout.addWidget(welcome_title)
         motto.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        withlove.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(motto)
         layout.addSpacerItem(spacer)
         layout.addWidget(start)
@@ -239,6 +241,7 @@ class MainWindow(QMainWindow):
         statsholder.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(statsholder)
+        layout.addWidget(withlove)
         
         return scene
     

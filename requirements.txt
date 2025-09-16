@@ -2,5 +2,6 @@ PyQt6
 supermemo2
 requests
 flask
-jwt
+PyJWT
 playsound
+PyObjC #not strictly necessary, better efficency
